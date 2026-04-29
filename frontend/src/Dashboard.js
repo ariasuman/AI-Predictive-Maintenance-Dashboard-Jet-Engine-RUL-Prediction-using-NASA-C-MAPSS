@@ -51,15 +51,20 @@ export default function Dashboard() {
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "#475569" }}>⏳ Loading real data from model...</div>;
   if (error)   return <div style={{ padding: "20px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "12px", color: "#ef4444", fontSize: "13px" }}>⚠️ {error}</div>;
 
-  const healthPct = Math.round((stats.healthy_count / stats.total_engines) * 100);
-  const selectedEngine = (stats.engines || []).find(e => e.engine === engine);
-  const scatterData = (stats.engines || []).map(e => ({ actual: e.actual, predicted: e.predicted }));
+  const engines      = stats.engines || [];
+  const total        = stats.total_engines || 0;
+  const healthyCount = stats.healthy_count || 0;
+  const healthPct    = total > 0 ? Math.round((healthyCount / total) * 100) : 0;
+  const selectedEngine = engines.find(e => e.engine === engine) || null;
+  const scatterData  = engines
+    .filter(e => e.actual != null && e.predicted != null)
+    .map(e => ({ actual: e.actual, predicted: e.predicted }));
 
   const kpiData = [
-    { label: "Total Engines",  value: stats.total_engines, icon: "🛩️", color: "#38bdf8", sub: "Fleet monitored" },
-    { label: "Average RUL",    value: `${stats.avg_rul}`,  icon: "⏱️", color: "#818cf8", sub: "Cycles remaining" },
-    { label: "Critical Engines",value: stats.failure_count,icon: "⚠️", color: "#ef4444", sub: "RUL ≤ 50 cycles" },
-    { label: "Last Maintenance",value: LAST_MAINTENANCE,   icon: "🔧", color: "#34d399", sub: "Scheduled check" },
+    { label: "Total Engines",   value: stats.total_engines ?? "—", icon: "🛩️", color: "#38bdf8", sub: "Fleet monitored" },
+    { label: "Average RUL",     value: stats.avg_rul       ?? "—", icon: "⏱️", color: "#818cf8", sub: "Cycles remaining" },
+    { label: "Critical Engines",value: stats.failure_count ?? "—", icon: "⚠️", color: "#ef4444", sub: "RUL ≤ 50 cycles" },
+    { label: "Last Maintenance",value: LAST_MAINTENANCE,            icon: "🔧", color: "#34d399", sub: "Scheduled check" },
   ];
 
   return (
@@ -68,11 +73,11 @@ export default function Dashboard() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
         <div>
           <h1 style={{ fontSize: "22px", fontWeight: 700, color: "#f1f5f9" }}>✈️ Predictive Maintenance Dashboard</h1>
-          <p style={{ fontSize: "13px", color: "#475569", marginTop: "4px" }}>NASA CMAPSS · {stats.total_engines} engines · Live XGBoost predictions</p>
+          <p style={{ fontSize: "13px", color: "#475569", marginTop: "4px" }}>NASA CMAPSS · {stats.total_engines ?? 0} engines · Live XGBoost predictions</p>
         </div>
         <div style={{ display: "flex", gap: "10px" }}>
           <button onClick={() => navigate("/alerts")} style={{ padding: "8px 14px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", color: "#ef4444", fontSize: "12px", cursor: "pointer" }}>
-            🔔 {stats.failure_count} Alerts
+            🔔 {stats.failure_count ?? 0} Alerts
           </button>
           <button onClick={() => navigate("/maintenance")} style={{ padding: "8px 14px", background: "rgba(56,189,248,0.1)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8", fontSize: "12px", cursor: "pointer" }}>
             🔧 Schedule
@@ -102,9 +107,9 @@ export default function Dashboard() {
       {/* Fleet status pills */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
         {[
-          { label: "Healthy", count: stats.healthy_count,  color: "#22c55e", bg: "rgba(34,197,94,0.1)" },
-          { label: "Warning", count: stats.warning_count,  color: "#facc15", bg: "rgba(250,204,21,0.1)" },
-          { label: "Critical",count: stats.failure_count,  color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+          { label: "Healthy", count: stats.healthy_count ?? 0, color: "#22c55e", bg: "rgba(34,197,94,0.1)" },
+          { label: "Warning", count: stats.warning_count ?? 0, color: "#facc15", bg: "rgba(250,204,21,0.1)" },
+          { label: "Critical",count: stats.failure_count ?? 0, color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
         ].map(({ label, count, color: c, bg }) => (
           <div key={label} style={{ padding: "8px 20px", background: bg, border: `1px solid ${c}40`, borderRadius: "20px", display: "flex", alignItems: "center", gap: "8px" }}>
             <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: c }} />
@@ -129,7 +134,7 @@ export default function Dashboard() {
             <p style={{ fontSize: "13px", fontWeight: 600, color: "#94a3b8" }}>Engine Detail</p>
             <select value={engine} onChange={e => setEngine(Number(e.target.value))}
               style={{ background: "#020617", border: "1px solid #334155", color: "#94a3b8", padding: "4px 8px", borderRadius: "6px", fontSize: "12px", cursor: "pointer" }}>
-              {(stats.engines || []).map(e => <option key={e.engine} value={e.engine}>Engine #{e.engine}</option>)}
+              {engines.map(e => <option key={e.engine} value={e.engine}>Engine #{e.engine}</option>)}
             </select>
           </div>
           {selectedEngine && (

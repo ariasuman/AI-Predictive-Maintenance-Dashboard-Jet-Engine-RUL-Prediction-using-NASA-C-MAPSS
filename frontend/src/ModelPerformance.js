@@ -36,26 +36,29 @@ export default function ModelPerformance() {
 
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "60vh", color: "#475569" }}>⏳ Loading model metrics...</div>;
   if (error)   return <div style={{ padding: "20px", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "12px", color: "#ef4444" }}>⚠️ {error}</div>;
+  if (!perf || !perf.total) return <div style={{ padding: "20px", color: "#475569" }}>No performance data available.</div>;
 
-  const accuracy10 = ((perf.within_10 / perf.total) * 100).toFixed(1);
-  const accuracy20 = ((perf.within_20 / perf.total) * 100).toFixed(1);
-
-  // Top 30 engines by error for chart
-  const chartData = [...perf.errors].sort((a, b) => b.error - a.error).slice(0, 30);
+  const total      = perf.total || 1;
+  const within10   = perf.within_10 ?? 0;
+  const within20   = perf.within_20 ?? 0;
+  const accuracy10 = ((within10 / total) * 100).toFixed(1);
+  const accuracy20 = ((within20 / total) * 100).toFixed(1);
+  const errors     = Array.isArray(perf.errors) ? perf.errors : [];
+  const chartData  = [...errors].sort((a, b) => b.error - a.error).slice(0, 30);
 
   return (
     <div style={{ maxWidth: "1100px" }}>
       <div style={{ marginBottom: "28px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 700, color: "#f1f5f9" }}>🧠 Model Performance</h1>
-        <p style={{ fontSize: "13px", color: "#475569", marginTop: "4px" }}>XGBoost regression metrics on NASA CMAPSS FD001 test set · {perf.total} engines</p>
+        <p style={{ fontSize: "13px", color: "#475569", marginTop: "4px" }}>XGBoost regression metrics on NASA CMAPSS FD001 test set · {total} engines</p>
       </div>
 
       {/* Metric Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
-        <MetricCard label="RMSE"          value={perf.rmse}      unit="cycles" sub="Root Mean Squared Error"    color="#ef4444" icon="📉" />
-        <MetricCard label="MAE"           value={perf.mae}       unit="cycles" sub="Mean Absolute Error"        color="#fb923c" icon="📊" />
-        <MetricCard label="R² Score"      value={perf.r2}        unit=""       sub="Coefficient of determination" color="#22c55e" icon="🎯" />
-        <MetricCard label="Within ±10"    value={`${accuracy10}%`} unit=""    sub={`${perf.within_10}/${perf.total} engines`} color="#38bdf8" icon="✅" />
+        <MetricCard label="RMSE"      value={perf.rmse ?? "—"} unit="cycles" sub="Root Mean Squared Error"      color="#ef4444" icon="📉" />
+        <MetricCard label="MAE"       value={perf.mae  ?? "—"} unit="cycles" sub="Mean Absolute Error"          color="#fb923c" icon="📊" />
+        <MetricCard label="R² Score"  value={perf.r2   ?? "—"} unit=""       sub="Coefficient of determination"  color="#22c55e" icon="🎯" />
+        <MetricCard label="Within ±10" value={`${accuracy10}%`} unit=""      sub={`${within10}/${total} engines`} color="#38bdf8" icon="✅" />
       </div>
 
       {/* Accuracy breakdown */}
@@ -63,9 +66,9 @@ export default function ModelPerformance() {
         <div style={card}>
           <p style={{ fontSize: "13px", fontWeight: 600, color: "#94a3b8", marginBottom: "16px" }}>Prediction Accuracy Breakdown</p>
           {[
-            { label: "Within ±10 cycles",  pct: accuracy10, color: "#22c55e", count: perf.within_10 },
-            { label: "Within ±20 cycles",  pct: accuracy20, color: "#38bdf8", count: perf.within_20 },
-            { label: "Outside ±20 cycles", pct: (100 - accuracy20).toFixed(1), color: "#ef4444", count: perf.total - perf.within_20 },
+            { label: "Within ±10 cycles",  pct: accuracy10, color: "#22c55e", count: within10 },
+            { label: "Within ±20 cycles",  pct: accuracy20, color: "#38bdf8", count: within20 },
+            { label: "Outside ±20 cycles", pct: (100 - accuracy20).toFixed(1), color: "#ef4444", count: total - within20 },
           ].map(({ label, pct, color, count }) => (
             <div key={label} style={{ marginBottom: "14px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#64748b", marginBottom: "5px" }}>
@@ -85,7 +88,7 @@ export default function ModelPerformance() {
             { label: "Algorithm",       value: "XGBoost Regressor" },
             { label: "Dataset",         value: "NASA CMAPSS FD001" },
             { label: "Training Engines",value: "80 engines" },
-            { label: "Test Engines",    value: `${perf.total} engines` },
+            { label: "Test Engines",    value: `${total} engines` },
             { label: "Features",        value: "59 (14 sensors + rolling stats)" },
             { label: "RUL Clipping",    value: "125 cycles max" },
             { label: "n_estimators",    value: "300" },
